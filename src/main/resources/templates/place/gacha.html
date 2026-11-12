@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>오늘 뭐 먹지? | 부산 맛집 가챠</title>
+    <!-- Pretendard 폰트 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+    <link rel="stylesheet" th:href="@{/css/gacha.css}">
+</head>
+<body>
+
+<!-- 상단 네비게이션 바 -->
+<header class="main-header">
+    <div class="header-left">
+        <button type="button" id="openGachaBtn" class="open-gacha-btn">
+            🎲 오늘 뭐 먹지? 가챠
+        </button>
+        <span class="header-title"><a th:href="@{/place/list}" style="text-decoration:none; color:inherit;">🌊 BusanTasty</a></span>
+    </div>
+
+    <div class="header-right">
+        <a th:href="@{/place/list}" class="map-btn" style="text-decoration:none;">📋 맛집 목록</a>
+        <a th:href="@{/place/map}" class="map-btn" style="text-decoration:none;">🗺️ 전체 맛집 지도</a>
+        
+        <span th:if="${session.loginMember != null}" style="font-size:14px; font-weight:700; color:var(--primary-dark);">
+            👋 <span th:text="${session.nickname}">사용자</span>님
+        </span>
+        <a th:if="${session.loginMember != null}" th:href="@{/member/logout}" class="login-btn" style="text-decoration:none;">로그아웃</a>
+
+        <a th:if="${session.loginMember == null}" th:href="@{/member/login}" class="login-btn" style="text-decoration:none;">로그인</a>
+        <a th:if="${session.loginMember == null}" th:href="@{/member/register}" class="signup-btn" style="text-decoration:none;">회원가입</a>
+    </div>
+</header>
+
+<main class="main-content">
+    <section class="hero">
+        <span class="hero-badge">BUSAN FOOD GUIDE</span>
+        <h1>부산 맛집 결정 장애 해결소! 🎲</h1>
+        <p>선택하기 힘들 땐 가챠 머신을 돌려 오늘의 운명 맛집을 찾아보세요.</p>
+        <div style="margin-top: 24px;">
+            <button type="button" onclick="document.getElementById('openGachaBtn').click()" class="draw-btn" style="display:inline-flex; width:auto; padding:14px 28px;">
+                🎰 지금 바로 가챠 뽑기 시작하기
+            </button>
+        </div>
+    </section>
+</main>
+
+<!-- 가챠 팝업 모달 -->
+<div id="gachaModal" class="modal-overlay" style="display: flex;">
+    <div class="gacha-panel">
+
+        <!-- 닫기 버튼 -->
+        <button type="button" id="closeGachaBtn" class="close-btn" aria-label="닫기">✕</button>
+
+        <!-- 헤더 -->
+        <div class="gacha-header">
+            <p class="gacha-sub">부산 540여개 맛집 랜덤 추천</p>
+            <h2 class="gacha-title">🎲 오늘 뭐 먹지?</h2>
+        </div>
+
+        <!-- 조건 선택 -->
+        <div class="filter-section">
+            <div class="filter-group">
+                <label for="guSelect" class="filter-label">지역 (부산 구/군)</label>
+                <select id="guSelect" class="gu-select">
+                    <option value="">전체 지역 (부산 전체)</option>
+                    <option value="해운대구">해운대구</option>
+                    <option value="부산진구">부산진구 (서면)</option>
+                    <option value="수영구">수영구 (광안리)</option>
+                    <option value="중구">중구 (남포동/자갈치)</option>
+                    <option value="동래구">동래구</option>
+                    <option value="영도구">영도구</option>
+                    <option value="남구">남구</option>
+                    <option value="금정구">금정구</option>
+                    <option value="북구">북구</option>
+                    <option value="사하구">사하구</option>
+                    <option value="사상구">사상구</option>
+                    <option value="강서구">강서구</option>
+                    <option value="연제구">연제구</option>
+                    <option value="동구">동구 (부산역)</option>
+                    <option value="서구">서구 (송도)</option>
+                    <option value="기장군">기장군</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <span class="filter-label">카테고리</span>
+                <div class="category-list" id="categoryOptions">
+                    <button type="button" class="category-btn" data-value="한식">한식</button>
+                    <button type="button" class="category-btn" data-value="중식">중식</button>
+                    <button type="button" class="category-btn" data-value="일식">일식</button>
+                    <button type="button" class="category-btn" data-value="양식">양식</button>
+                    <button type="button" class="category-btn" data-value="카페/디저트">카페/디저트</button>
+                    <button type="button" class="category-btn" data-value="분식">분식</button>
+                    <button type="button" class="category-btn" data-value="아시안">아시안</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 가챠 버튼 -->
+        <button type="button" id="drawBtn" class="draw-btn">🎲 가챠 뽑기</button>
+
+        <!-- 뽑는 중 연출 영역 (캡슐이 흔들리다가 열림) -->
+        <div id="gachaStage" class="gacha-stage hidden">
+            <div class="stage-glow"></div>
+            <div class="capsule">
+                <div class="capsule-top"></div>
+                <div class="capsule-bottom"></div>
+                <div class="capsule-shine"></div>
+            </div>
+            <p id="stageText" class="stage-text">캡슐을 돌리는 중…</p>
+            <div class="stage-flash"></div>
+        </div>
+
+        <!-- 결과 표시 영역 -->
+        <div id="resultArea" class="result-card hidden">
+            <!-- 맛집 이미지 -->
+            <div id="resultImgContainer" class="result-img-wrap hidden">
+                <img id="resultImg" src="" alt="맛집 이미지" class="result-img">
+            </div>
+
+            <div class="result-body">
+                <p class="result-eyebrow">✨ 오늘의 맛집 당첨!</p>
+                <span class="result-tag-badge"><span id="resultTag">부산진구 · 한식</span></span>
+                <h3 id="resultName" class="result-name">맛집 이름</h3>
+                <p id="resultDesc" class="result-desc">소개글이 표시됩니다.</p>
+                <div class="result-menu-box mb-2">
+                    <span class="menu-label">🍽️ 대표메뉴</span>
+                    <span id="resultMenu" class="result-menu">메뉴 정보</span>
+                </div>
+                <div class="text-end" style="margin-top:12px;">
+                    <a id="resultDetailLink" href="#" class="open-gacha-btn" style="text-decoration:none; display:inline-block; font-size:13px; padding:8px 16px;">
+                        상세보기 바로가기 →
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- 가챠 이력 -->
+        <div class="history-section">
+            <p class="history-title">가챠 이력 (최근 3개)</p>
+            <div id="historyList" class="history-list"></div>
+        </div>
+    </div>
+
+    <!-- 폭죽 효과 영역 -->
+    <div id="confettiLayer" class="confetti-layer"></div>
+</div>
+
+<script th:src="@{/js/gacha.js}"></script>
+</body>
+</html>

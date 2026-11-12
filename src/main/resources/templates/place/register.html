@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>신규 맛집 등록 - 부산 맛집 지도</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; }
+        .register-card {
+            max-width: 860px;
+            margin: 40px auto;
+        }
+        .image-preview-box {
+            width: 100%;
+            height: 180px;
+            background-color: #f1f3f5;
+            border: 2px dashed #ced4da;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+        .image-preview-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: none;
+        }
+    </style>
+</head>
+<body class="d-flex flex-column min-vh-100">
+
+<!-- 상단 네비게이션 바 -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
+    <div class="container">
+        <a class="navbar-brand fw-bold" th:href="@{/place/list}">🌊 부산 맛집 지도</a>
+        <div class="ms-auto d-flex align-items-center">
+            <!-- 자동 로그아웃 카운트다운 타이머 배지 -->
+            <span id="sessionTimerBadge" th:if="${session.loginMember != null}" class="badge bg-light text-dark me-2 fw-normal" title="5분간 무입력 시 자동 로그아웃">⏱️ 05:00</span>
+            <a th:href="@{/place/list}" class="btn btn-outline-light btn-sm">← 맛집 목록으로 돌아가기</a>
+        </div>
+    </div>
+</nav>
+
+<div class="container">
+    <div class="card register-card shadow-sm border-0">
+        <div class="card-header bg-primary text-white py-3">
+            <h4 class="mb-0 fw-bold">✨ 신규 맛집 등록 (관리자 전용)</h4>
+        </div>
+
+        <div class="card-body p-4">
+            <!-- 맛집 등록 폼 (파일 업로드 지원) -->
+            <form id="registerForm" th:action="@{/place/register}" method="post" enctype="multipart/form-data">
+
+                <!-- 1. 상호명 (한글 & 영문) -->
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">상호명 (한글) <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="restaurantNameKo" placeholder="예: 쌍둥이돼지국밥" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">상호명 (영문)</label>
+                        <input type="text" class="form-control" name="restaurantNameEn" placeholder="예: Ssangdungi Dwaeji Gukbap">
+                    </div>
+                </div>
+
+                <!-- 2. 지역구 & 카테고리 -->
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">지역구 <span class="text-danger">*</span></label>
+                        <select class="form-select" name="guName" required>
+                            <option value="">지역구를 선택해주세요</option>
+                            <option value="해운대구">해운대구</option>
+                            <option value="부산진구">부산진구 (서면)</option>
+                            <option value="수영구">수영구 (광안리)</option>
+                            <option value="중구">중구 (남포동/자갈치)</option>
+                            <option value="동래구">동래구</option>
+                            <option value="영도구">영도구</option>
+                            <option value="금정구">금정구</option>
+                            <option value="남구">남구</option>
+                            <option value="북구">북구</option>
+                            <option value="사하구">사하구</option>
+                            <option value="사상구">사상구</option>
+                            <option value="강서구">강서구</option>
+                            <option value="연제구">연제구</option>
+                            <option value="동구">동구 (부산역)</option>
+                            <option value="서구">서구 (송도)</option>
+                            <option value="기장군">기장군</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">카테고리</label>
+                        <input type="text" class="form-control" name="category" placeholder="예: 한식, 일식, 중식, 카페/디저트, 분식 등" list="categoryOptions">
+                        <datalist id="categoryOptions">
+                            <option value="한식">
+                            <option value="일식">
+                            <option value="중식">
+                            <option value="양식">
+                            <option value="카페/디저트">
+                            <option value="분식">
+                            <option value="아시안">
+                        </datalist>
+                    </div>
+                </div>
+
+                <!-- 3. 상세 주소 & 전화번호 -->
+                <div class="row mb-3">
+                    <div class="col-md-8">
+                        <label class="form-label fw-bold">상세 주소 <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="address" placeholder="예: 부산광역시 남구 유엔평화로 35-1" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">전화번호</label>
+                        <input type="text" class="form-control" name="phone" placeholder="예: 051-628-7020">
+                    </div>
+                </div>
+
+                <!-- 4. 대표 메뉴 & 가격대 & 주차 정보 -->
+                <div class="row mb-3">
+                    <div class="col-md-5">
+                        <label class="form-label fw-bold">대표 메뉴</label>
+                        <input type="text" class="form-control" name="mainMenu" placeholder="예: 돼지국밥, 수육백반">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">가격대</label>
+                        <input type="text" class="form-control" name="priceRange" placeholder="예: 9,000원 ~ 25,000원">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold">주차 정보</label>
+                        <input type="text" class="form-control" name="parking" placeholder="예: 전용 주차장 완비 / 불가">
+                    </div>
+                </div>
+
+                <!-- 5. 영업시간 & 휴무일 & 브레이크타임 -->
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">영업시간</label>
+                        <input type="text" class="form-control" name="operatingHours" placeholder="예: 09:00 ~ 22:00">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">휴무일</label>
+                        <input type="text" class="form-control" name="offDays" placeholder="예: 연중무휴 / 매주 화요일">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">브레이크 타임</label>
+                        <input type="text" class="form-control" name="breakTime" placeholder="예: 15:00 ~ 17:00">
+                    </div>
+                </div>
+
+                <!-- 6. 대표 이미지 업로드 및 URL 매칭 (대표 이미지 1, 2) -->
+                <div class="row mb-4">
+                    <!-- 이미지 1 -->
+                    <div class="col-md-6 mb-3 mb-md-0">
+                        <div class="card p-3 bg-light border">
+                            <label class="form-label fw-bold text-primary">🖼️ 대표 이미지 1 (업로드 또는 URL)</label>
+                            
+                            <!-- 이미지 1 미리보기 영역 -->
+                            <div class="image-preview-box mb-2" id="previewBox1">
+                                <span class="text-muted small" id="previewPlaceholder1">📷 이미지 1 미리보기</span>
+                                <img id="previewImg1" alt="대표 이미지 1 미리보기">
+                            </div>
+
+                            <!-- 파일 업로드 인풋 -->
+                            <div class="mb-2">
+                                <label class="form-label small fw-bold text-secondary mb-1">📁 이미지 파일 업로드:</label>
+                                <input type="file" class="form-control form-control-sm" name="image1File" accept="image/*" onchange="previewImage(this, 'previewImg1', 'previewPlaceholder1', 'imageUrlInput1')">
+                            </div>
+
+                            <!-- 외부 URL 직접 입력 인풋 -->
+                            <div>
+                                <label class="form-label small fw-bold text-secondary mb-1">🌐 또는 이미지 URL 직접 입력:</label>
+                                <input type="text" class="form-control form-control-sm" id="imageUrlInput1" name="imageUrl1" placeholder="예: https://... 또는 /upload/..." oninput="previewUrl(this.value, 'previewImg1', 'previewPlaceholder1')">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 이미지 2 -->
+                    <div class="col-md-6">
+                        <div class="card p-3 bg-light border">
+                            <label class="form-label fw-bold text-primary">🖼️ 서브 이미지 2 (업로드 또는 URL)</label>
+                            
+                            <!-- 이미지 2 미리보기 영역 -->
+                            <div class="image-preview-box mb-2" id="previewBox2">
+                                <span class="text-muted small" id="previewPlaceholder2">📷 이미지 2 미리보기</span>
+                                <img id="previewImg2" alt="서브 이미지 2 미리보기">
+                            </div>
+
+                            <!-- 파일 업로드 인풋 -->
+                            <div class="mb-2">
+                                <label class="form-label small fw-bold text-secondary mb-1">📁 이미지 파일 업로드:</label>
+                                <input type="file" class="form-control form-control-sm" name="image2File" accept="image/*" onchange="previewImage(this, 'previewImg2', 'previewPlaceholder2', 'imageUrlInput2')">
+                            </div>
+
+                            <!-- 외부 URL 직접 입력 인풋 -->
+                            <div>
+                                <label class="form-label small fw-bold text-secondary mb-1">🌐 또는 이미지 URL 직접 입력:</label>
+                                <input type="text" class="form-control form-control-sm" id="imageUrlInput2" name="imageUrl2" placeholder="예: https://... 또는 /upload/..." oninput="previewUrl(this.value, 'previewImg2', 'previewPlaceholder2')">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 7. 맛집 상세 설명 (국문 & 영문) -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold">상세 설명 / 소개글 (한국어)</label>
+                    <textarea class="form-control" name="summaryKo" rows="3" placeholder="부산 현지인이 추천하는 깊은 국물 맛의 대표 국밥집..."></textarea>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label fw-bold">상세 설명 / 소개글 (영문)</label>
+                    <textarea class="form-control" name="summaryEn" rows="2" placeholder="A famous local pork soup restaurant in Busan..."></textarea>
+                </div>
+
+                <!-- 하단 버튼 영역 -->
+                <div class="d-flex justify-content-between border-top pt-3">
+                    <a th:href="@{/place/list}" class="btn btn-secondary">취소</a>
+                    <button type="submit" class="btn btn-primary fw-bold px-4">
+                        ➕ 맛집 등록하기
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<footer class="bg-white py-4 border-top text-center text-muted mt-auto">
+    <div class="container">
+        <p class="mb-0">© 2026 부산 맛집 탐방 서비스. All rights reserved.</p>
+    </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- 5분 무활동 자동 로그아웃 스크립트 -->
+<script th:if="${session.loginMember != null}" src="/js/auto-logout.js"></script>
+
+<script th:inline="javascript">
+    // 로컬 파일 업로드 시 미리보기
+    function previewImage(input, imgId, placeholderId, urlInputId) {
+        const img = document.getElementById(imgId);
+        const placeholder = document.getElementById(placeholderId);
+        const urlInput = document.getElementById(urlInputId);
+
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                img.src = e.target.result;
+                img.style.display = 'block';
+                placeholder.style.display = 'none';
+            };
+            reader.readAsDataURL(input.files[0]);
+            if (urlInput) {
+                urlInput.value = ''; // 파일 선택 시 URL 입력란 클리어
+            }
+        } else {
+            img.style.display = 'none';
+            placeholder.style.display = 'block';
+        }
+    }
+
+    // URL 텍스트 입력 시 미리보기
+    function previewUrl(url, imgId, placeholderId) {
+        const img = document.getElementById(imgId);
+        const placeholder = document.getElementById(placeholderId);
+
+        if (url && url.trim() !== '') {
+            img.src = url.trim();
+            img.onload = function() {
+                img.style.display = 'block';
+                placeholder.style.display = 'none';
+            };
+            img.onerror = function() {
+                img.style.display = 'none';
+                placeholder.style.display = 'block';
+            };
+        } else {
+            img.style.display = 'none';
+            placeholder.style.display = 'block';
+        }
+    }
+</script>
+</body>
+</html>

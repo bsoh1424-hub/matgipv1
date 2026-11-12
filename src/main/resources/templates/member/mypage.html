@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>마이페이지 - 부산 맛집 탐방</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; }
+        .star-rating {
+            color: #ffc107;
+            font-size: 1.05rem;
+        }
+        .review-modify-box {
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+        }
+        .bookmark-card {
+            border: 1px solid #e9ecef;
+            border-radius: 10px;
+            transition: all 0.2s ease-in-out;
+            background-color: #ffffff;
+        }
+        .bookmark-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 15px rgba(0,0,0,0.08);
+            border-color: #cbd5e1;
+        }
+    </style>
+</head>
+<body class="d-flex flex-column min-vh-100">
+
+<!-- 상단 네비게이션 바 -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
+    <div class="container">
+        <a class="navbar-brand fw-bold" th:href="@{/place/list}">🌊 부산 맛집 지도</a>
+        <div class="ms-auto d-flex align-items-center">
+            <!-- 자동 로그아웃 카운트다운 타이머 배지 -->
+            <span id="sessionTimerBadge" th:if="${session.loginMember != null}" class="badge bg-light text-dark me-2 fw-normal" title="5분간 무입력 시 자동 로그아웃">⏱️ 05:00</span>
+            <a th:href="@{/place/list}" class="btn btn-outline-light btn-sm">맛집 목록</a>
+            <a th:href="@{/member/logout}" class="btn btn-light btn-sm ms-2">로그아웃</a>
+        </div>
+    </div>
+</nav>
+
+<!-- 알림 메시지 (Flash Attributes) -->
+<div class="container mt-3" style="max-width: 900px;">
+    <div th:if="${msg != null}" class="alert alert-success alert-dismissible fade show" role="alert">
+        <span th:text="${msg}">성공 메시지</span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    <div th:if="${error != null}" class="alert alert-danger alert-dismissible fade show" role="alert">
+        <span th:text="${error}">오류 메시지</span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+</div>
+
+<main class="container my-4" style="max-width: 900px;">
+
+    <!-- 1. 회원 정보 수정 카드 -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center border-bottom">
+            <h5 class="card-title fw-bold mb-0 text-primary">👤 내 프로필 관리</h5>
+            <span class="badge bg-light text-secondary border" th:text="${session.loginRole == 'ROLE_ADMIN' ? '👑 관리자' : '일반 회원'}">일반 회원</span>
+        </div>
+        <div class="card-body p-4">
+            <!-- 정보 수정 폼 -->
+            <form id="modifyForm" th:action="@{/member/modify}" method="post">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label text-muted small fw-bold">이메일 계정</label>
+                        <input type="text" class="form-control bg-light" th:value="${dto != null ? dto.email : ''}" readonly>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="nickname" class="form-label fw-bold small">닉네임</label>
+                        <input type="text" class="form-control" id="nickname" name="nickname" th:value="${dto != null ? dto.nickname : ''}" required>
+                    </div>
+
+                    <div class="col-12">
+                        <label for="newPassword" class="form-label fw-bold small">새 비밀번호 (선택)</label>
+                        <input type="password" class="form-control" id="newPassword" name="newPassword" placeholder="비밀번호 변경을 원할 시에만 입력하세요">
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top">
+                    <button type="submit" class="btn btn-primary px-4 fw-bold">정보 수정 저장</button>
+                    <!-- 회원 탈퇴 버튼 (독립된 withdrawForm 트리거) -->
+                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="confirmWithdraw()">회원 탈퇴</button>
+                </div>
+            </form>
+
+            <!-- ⚠️ 독립된 회원 탈퇴 폼 (중첩 방지) -->
+            <form id="withdrawForm" th:action="@{/member/withdraw}" method="post" style="display: none;">
+            </form>
+        </div>
+    </div>
+
+    <!-- 2. 내가 작성한 맛집 리뷰 관리 카드 -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center border-bottom">
+            <h5 class="card-title fw-bold mb-0 text-dark">
+                ✍️ 내가 작성한 리뷰 관리
+                <span class="badge bg-primary rounded-pill ms-1" th:text="${myReviews != null ? myReviews.size() : 0}">0</span>
+            </h5>
+            <small class="text-muted">작성한 리뷰를 확인하고 바로 수정 및 삭제할 수 있습니다.</small>
+        </div>
+
+        <div class="card-body p-4">
+
+            <!-- 작성한 리뷰가 없을 때 -->
+            <div th:if="${myReviews == null or #lists.isEmpty(myReviews)}" class="text-center py-5">
+                <p class="text-muted fs-6 mb-2">아직 작성한 맛집 리뷰가 없습니다. 🍃</p>
+                <a th:href="@{/place/list}" class="btn btn-outline-primary btn-sm fw-bold">부산 맛집 탐방하러 가기 →</a>
+            </div>
+
+            <!-- 작성한 리뷰 목록 리스트 -->
+            <div th:if="${myReviews != null and !#lists.isEmpty(myReviews)}" class="list-group list-group-flush">
+                <div class="list-group-item px-0 py-3 border-bottom" th:each="r : ${myReviews}">
+                    
+                    <!-- 일반 뷰 모드 -->
+                    <div th:id="'my_view_' + ${r.id}">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <!-- 맛집 상호명 클릭 시 해당 맛집 상세페이지 이동 -->
+                                <a th:href="@{/place/read(pno=${r.restaurantId})}" class="text-decoration-none fw-bold text-primary fs-6">
+                                    🏠 <span th:text="${r.restaurantName}">맛집 상호명</span>
+                                </a>
+                                <span class="badge bg-light text-secondary border ms-1" style="font-size: 11px;" th:text="|식당 #${r.restaurantId}|">식당 #1</span>
+                                <span class="badge bg-info text-dark ms-1 small" th:if="${r.soloLevel != null}" th:text="${'혼밥 ' + r.soloLevel}">혼밥 LV1</span>
+                                <small class="text-muted ms-2" th:text="${r.regDate != null ? #temporals.format(r.regDate, 'yyyy-MM-dd HH:mm') : ''}">2026-10-01</small>
+                            </div>
+
+                            <!-- 수정 및 삭제 버튼 -->
+                            <div class="d-flex gap-1">
+                                <button type="button" class="btn btn-outline-primary btn-sm py-0 px-2" style="font-size: 0.75rem;" th:onclick="'toggleMyReviewForm(' + ${r.id} + ')'">
+                                    ✏️ 수정
+                                </button>
+                                <form th:action="@{/place/review/remove}" method="post" onsubmit="return confirm('이 리뷰를 삭제하시겠습니까?');" style="display: inline;">
+                                    <input type="hidden" name="reviewId" th:value="${r.id}">
+                                    <input type="hidden" name="restaurantId" th:value="${r.restaurantId}">
+                                    <input type="hidden" name="from" value="mypage">
+                                    <button type="submit" class="btn btn-outline-danger btn-sm py-0 px-2" style="font-size: 0.75rem;">삭제</button>
+                                </form>
+                            </div>
+                        </div>
+
+                        <!-- 별점 -->
+                        <div class="star-rating mb-2">
+                            <span th:each="i : ${#numbers.sequence(1, r.rating)}">⭐</span>
+                        </div>
+
+                        <!-- 첨부 사진 (있을 경우) -->
+                        <div th:if="${r.imageUrl != null}" class="mb-2">
+                            <a th:href="${r.imageUrl}" target="_blank" title="사진 원본 보기">
+                                <img th:src="${r.imageUrl}" class="rounded border shadow-sm" style="max-height: 120px; max-width: 180px; object-fit: cover;" alt="리뷰 첨부 사진">
+                            </a>
+                        </div>
+
+                        <!-- 본문 내용 -->
+                        <p class="text-secondary mb-0 small" style="white-space: pre-line;" th:text="${r.content}">
+                            리뷰 본문 내용입니다.
+                        </p>
+                    </div>
+
+                    <!-- 인라인 수정 모드 -->
+                    <div th:id="'my_edit_' + ${r.id}" class="d-none review-modify-box p-3 mt-2 rounded">
+                        <form th:action="@{/place/review/modify}" method="post" enctype="multipart/form-data">
+                            <input type="hidden" name="reviewId" th:value="${r.id}">
+                            <input type="hidden" name="restaurantId" th:value="${r.restaurantId}">
+                            <input type="hidden" name="from" value="mypage">
+
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="fw-bold small text-primary">✏️ 리뷰 수정 (<span th:text="${r.restaurantName}">맛집명</span>)</span>
+                                <button type="button" class="btn btn-sm btn-light py-0 text-muted" th:onclick="'toggleMyReviewForm(' + ${r.id} + ')'">✕ 닫기</button>
+                            </div>
+
+                            <div class="row g-2 mb-2">
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold">⭐ 별점 평가</label>
+                                    <select class="form-select form-select-sm" name="rating">
+                                        <option value="5" th:selected="${r.rating == 5}">⭐⭐⭐⭐⭐ (5점)</option>
+                                        <option value="4" th:selected="${r.rating == 4}">⭐⭐⭐⭐ (4점)</option>
+                                        <option value="3" th:selected="${r.rating == 3}">⭐⭐⭐ (3점)</option>
+                                        <option value="2" th:selected="${r.rating == 2}">⭐⭐ (2점)</option>
+                                        <option value="1" th:selected="${r.rating == 1}">⭐ (1점)</option>
+                                    </select>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold">🍚 혼밥 난이도</label>
+                                    <select class="form-select form-select-sm" name="soloLevel">
+                                        <option value="LV1" th:selected="${r.soloLevel != null and r.soloLevel.name() == 'LV1'}">LV1 - 편의점/패스트푸드</option>
+                                        <option value="LV2" th:selected="${r.soloLevel != null and r.soloLevel.name() == 'LV2'}">LV2 - 푸드코트/분식집</option>
+                                        <option value="LV3" th:selected="${r.soloLevel != null and r.soloLevel.name() == 'LV3'}">LV3 - 일반 식당/백반집</option>
+                                        <option value="LV4" th:selected="${r.soloLevel != null and r.soloLevel.name() == 'LV4'}">LV4 - 패밀리 레스토랑/뷔페</option>
+                                        <option value="LV5" th:selected="${r.soloLevel != null and r.soloLevel.name() == 'LV5'}">LV5 - 술집/고깃집</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- 기존 첨부 사진 관리 & 사진 교체 -->
+                            <div class="mb-2">
+                                <div th:if="${r.imageUrl != null}" class="d-flex align-items-center gap-2 mb-2 p-2 bg-white rounded border">
+                                    <img th:src="${r.imageUrl}" class="rounded border" style="width: 50px; height: 50px; object-fit: cover;" alt="현재 사진">
+                                    <div class="form-check form-check-inline mb-0">
+                                        <input class="form-check-input" type="checkbox" name="deleteImage" value="true" th:id="'myDelImg_' + ${r.id}">
+                                        <label class="form-check-label small text-danger fw-bold" th:for="'myDelImg_' + ${r.id}">🗑️ 기존 사진 삭제</label>
+                                    </div>
+                                </div>
+                                <label class="form-label small fw-bold">📷 사진 변경 (선택)</label>
+                                <input type="file" name="file" accept="image/*" class="form-control form-control-sm">
+                            </div>
+
+                            <div class="mb-2">
+                                <textarea class="form-control form-control-sm" name="content" rows="3" required th:text="${r.content}"></textarea>
+                            </div>
+
+                            <div class="text-end">
+                                <button type="button" class="btn btn-secondary btn-sm me-1" th:onclick="'toggleMyReviewForm(' + ${r.id} + ')'">취소</button>
+                                <button type="submit" class="btn btn-primary btn-sm px-3 fw-bold">수정 완료</button>
+                            </div>
+                        </form>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- 3. 내가 찜한 맛집 목록 (북마크) 카드 -->
+    <div class="card shadow-sm border-0 mb-5">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center border-bottom">
+            <h5 class="card-title fw-bold mb-0 text-danger">
+                💖 내가 찜한 맛집 목록
+                <span class="badge bg-danger rounded-pill ms-1" th:text="${myBookmarks != null ? myBookmarks.size() : 0}">0</span>
+            </h5>
+            <small class="text-muted">찜해둔 맛집 정보를 확인하고 방문해보세요!</small>
+        </div>
+
+        <div class="card-body p-4">
+
+            <!-- 찜한 맛집이 없을 때 -->
+            <div th:if="${myBookmarks == null or #lists.isEmpty(myBookmarks)}" class="text-center py-5">
+                <p class="text-muted fs-6 mb-2">아직 찜한 맛집이 없습니다. 🤍</p>
+                <small class="text-muted d-block mb-3">맛집 상세 페이지에서 하트(🤍)를 눌러 북마크에 추가해보세요.</small>
+                <a th:href="@{/place/list}" class="btn btn-outline-danger btn-sm fw-bold">부산 맛집 둘러보기 →</a>
+            </div>
+
+            <!-- 찜한 맛집 목록 그리드 -->
+            <div th:if="${myBookmarks != null and !#lists.isEmpty(myBookmarks)}" class="row row-cols-1 row-cols-md-2 g-3">
+                <div class="col" th:each="bm : ${myBookmarks}">
+                    <div class="card h-100 bookmark-card p-3">
+                        <div class="d-flex gap-3">
+                            <!-- 식당 대표 이미지 -->
+                            <div style="width: 90px; height: 90px; flex-shrink: 0;">
+                                <img th:if="${bm.imageUrl != null and bm.imageUrl != ''}" th:src="${bm.imageUrl}"
+                                     class="w-100 h-100 rounded border object-fit-cover" alt="식당 이미지"
+                                     onerror="this.src='https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=150&q=80'">
+                                <div th:if="${bm.imageUrl == null or bm.imageUrl == ''}" class="w-100 h-100 bg-light rounded border d-flex align-items-center justify-content-center text-muted small">
+                                    🍽️
+                                </div>
+                            </div>
+
+                            <!-- 식당 정보 -->
+                            <div class="flex-grow-1 overflow-hidden">
+                                <div class="d-flex justify-content-between align-items-start mb-1">
+                                    <a th:href="@{/place/read(pno=${bm.restaurantId})}" class="fw-bold text-dark text-decoration-none text-truncate fs-6 me-2" th:text="${bm.restaurantName}">
+                                        식당 상호명
+                                    </a>
+                                    <!-- 찜 해제 폼 버튼 -->
+                                    <form th:action="@{/place/bookmark/remove}" method="post" onsubmit="return confirm('찜 목록에서 제외하시겠습니까?');" style="display:inline;">
+                                        <input type="hidden" name="restaurantId" th:value="${bm.restaurantId}">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger border-0 p-0" title="찜 해제" style="line-height:1;">
+                                            ❤️
+                                        </button>
+                                    </form>
+                                </div>
+
+                                <!-- 식당번호 & 지역구 & 카테고리 -->
+                                <div class="mb-1 d-flex flex-wrap gap-1 align-items-center">
+                                    <span class="badge bg-secondary" style="font-size: 11px;" th:text="${bm.guName}">해운대구</span>
+                                    <span class="badge bg-light text-primary border" style="font-size: 11px;" th:text="${bm.category}">한식</span>
+                                    <span class="text-muted" style="font-size: 11px;" th:text="|#${bm.restaurantId}|">#12</span>
+                                </div>
+
+                                <!-- 평균 별점 & 리뷰수 -->
+                                <div class="mb-1" style="font-size: 13px;">
+                                    <span class="text-warning fw-bold" th:text="|⭐ ${bm.avgRating > 0 ? bm.avgRating : '0.0'}|">⭐ 4.5</span>
+                                    <span class="text-muted small" th:text="|(${bm.reviewCount}개 리뷰)|">(5개 리뷰)</span>
+                                </div>
+
+                                <!-- 대표 메뉴 -->
+                                <div class="text-secondary small text-truncate" th:if="${bm.mainMenu != null}" th:text="|🍴 ${bm.mainMenu}|">
+                                    🍴 대표 메뉴
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 상세 보기 링크 -->
+                        <div class="mt-2 pt-2 border-top d-flex justify-content-between align-items-center">
+                            <small class="text-muted" style="font-size: 11px;" th:text="${bm.regDate != null ? #temporals.format(bm.regDate, 'yyyy-MM-dd') + ' 찜함' : ''}">2026-10-01 찜함</small>
+                            <a th:href="@{/place/read(pno=${bm.restaurantId})}" class="btn btn-outline-primary btn-sm py-0 px-2 fw-bold" style="font-size: 12px;">
+                                맛집 보러가기 →
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</main>
+
+<footer class="bg-white py-4 border-top text-center text-muted mt-auto">
+    <div class="container">
+        <p class="mb-0">© 2026 부산 맛집 탐방 서비스. All rights reserved.</p>
+    </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<!-- 5분 무활동 자동 로그아웃 스크립트 -->
+<script th:if="${session.loginMember != null}" src="/js/auto-logout.js"></script>
+
+<script>
+    // 회원 탈퇴 확인 및 폼 전송
+    function confirmWithdraw() {
+        if (confirm('정말 회원 탈퇴를 진행하시겠습니까?\n\n⚠️ 탈퇴 시 회원 계정과 작성하신 리뷰, 찜 목록이 데이터베이스에서 완전히 삭제되며 복구할 수 없습니다.')) {
+            document.getElementById('withdrawForm').submit();
+        }
+    }
+
+    function toggleMyReviewForm(reviewId) {
+        const viewBox = document.getElementById('my_view_' + reviewId);
+        const editBox = document.getElementById('my_edit_' + reviewId);
+
+        if (viewBox && editBox) {
+            if (editBox.classList.contains('d-none')) {
+                editBox.classList.remove('d-none');
+                viewBox.classList.add('d-none');
+            } else {
+                editBox.classList.add('d-none');
+                viewBox.classList.remove('d-none');
+            }
+        }
+    }
+</script>
+
+</body>
+</html>

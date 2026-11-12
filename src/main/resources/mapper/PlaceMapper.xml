@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.matgipv1.mapper.PlaceMapper">
+
+    <!-- 1. 상세 페이지 조회 (id 기반) -->
+    <select id="selectPlace" resultType="com.example.matgipv1.dto.PlaceDTO">
+        SELECT
+            id,
+            regdate,
+            moddate,
+            address,
+            break_time AS breakTime,
+            category,
+            gu_name AS guName,
+            main_menu AS mainMenu,
+            off_days AS offDays,
+            operating_hours AS operatingHours,
+            page_num AS pageNum,
+            parking,
+            phone,
+            price_range AS priceRange,
+            restaurant_name_en AS restaurantNameEn,
+            restaurant_name_ko AS restaurantNameKo,
+            summary_ko AS summaryKo,
+            summary_en AS summaryEn,
+            Image_url1 AS imageUrl1,
+            image_url2 AS imageUrl2,
+            summary,
+            source_type AS sourceType,
+            api_id AS apiId
+        FROM busan_restaurants
+        WHERE id = #{id}
+    </select>
+
+    <!-- 2. 공공데이터 수집 시 저장 (INSERT / UPDATE) -->
+    <insert id="insertApiPlace">
+        INSERT INTO busan_restaurants (
+            address,
+            category,
+            gu_name,
+            main_menu,
+            operating_hours,
+            phone,
+            restaurant_name_ko,
+            summary_ko,
+            summary,
+            Image_url1,
+            source_type,
+            api_id,
+            regdate,
+            moddate
+        ) VALUES (
+                     #{address},
+                     #{category},
+                     #{guName},
+                     #{mainMenu},
+                     #{operatingHours},
+                     #{phone},
+                     #{restaurantNameKo},
+                     #{summaryKo},
+                     #{summaryKo}, -- summary에도 동일하게 저장
+                     #{imageUrl1},
+                     'API',
+                     #{apiId},
+                     NOW(),
+                     NOW()
+                 )
+        ON DUPLICATE KEY UPDATE
+                             address = VALUES(address),
+                             category = VALUES(category),
+                             gu_name = VALUES(gu_name),
+                             main_menu = VALUES(main_menu),
+                             operating_hours = VALUES(operating_hours),
+                             phone = VALUES(phone),
+                             restaurant_name_ko = VALUES(restaurant_name_ko),
+                             summary_ko = VALUES(summary_ko),
+                             summary = VALUES(summary),
+                             Image_url1 = VALUES(Image_url1),
+                             moddate = NOW()
+    </insert>
+
+</mapper>

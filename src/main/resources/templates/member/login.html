@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>로그인 - BusanTasty</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        body {
+            background-color: #f4f7fa;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .login-container {
+            background-color: #ffffff;
+            width: 100%;
+            max-width: 420px;
+            padding: 40px 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .login-header h2 {
+            color: #1e3a8a; /* Deep Blue */
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .login-header p {
+            color: #64748b;
+            font-size: 14px;
+        }
+
+        .error-message {
+            background-color: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #dc2626;
+            padding: 10px 14px;
+            border-radius: 6px;
+            font-size: 13px;
+            margin-bottom: 20px;
+            text-align: center;
+            word-break: break-all;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            color: #334155;
+            margin-bottom: 6px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.2s ease;
+            outline: none;
+        }
+
+        .form-group input:focus {
+            border-color: #2563eb; /* Primary Blue */
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+        }
+
+        .btn-login {
+            width: 100%;
+            padding: 14px;
+            background-color: #2563eb; /* Primary Blue */
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .btn-login:hover {
+            background-color: #1d4ed8;
+        }
+
+        /* 소셜 로그인 구분선 */
+        .social-divider {
+            display: flex;
+            align-items: center;
+            text-align: center;
+            margin: 24px 0;
+            color: #94a3b8;
+            font-size: 13px;
+        }
+
+        .social-divider::before,
+        .social-divider::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .social-divider span {
+            padding: 0 10px;
+        }
+
+        /* 소셜 버튼 그룹 컨테이너 */
+        .social-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            width: 100%;
+        }
+
+        /* 각 소셜 버튼 스타일 */
+        .btn-social {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            height: 48px;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: opacity 0.2s ease;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn-social:hover {
+            opacity: 0.92;
+        }
+
+        /* 네이버 버튼 */
+        .btn-naver {
+            background-color: #03C75A;
+            color: #ffffff;
+        }
+
+        /* 카카오 버튼 */
+        .btn-kakao {
+            background-color: #FEE500;
+            color: #191919;
+        }
+
+        /* 아이콘 크기 고정 */
+        .social-icon {
+            flex-shrink: 0;
+        }
+
+        .login-footer {
+            margin-top: 24px;
+            text-align: center;
+            font-size: 14px;
+            color: #64748b;
+        }
+
+        .login-footer a {
+            color: #2563eb;
+            text-decoration: none;
+            font-weight: 600;
+            margin-left: 5px;
+        }
+
+        .login-footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+<div class="login-container">
+    <div class="login-header">
+        <h2>🌊 BusanTasty</h2>
+        <p>서비스 이용을 위해 로그인해 주세요</p>
+    </div>
+
+    <!-- 로그인 실패 메시지 -->
+    <div th:if="${param.error}" class="error-message">
+        <span th:if="${param.error[0] != '' and param.error[0] != 'true'}" th:text="${param.error[0]}">로그인 오류가 발생했습니다.</span>
+        <span th:if="${param.error[0] == '' or param.error[0] == 'true'}">이메일 또는 비밀번호가 올바르지 않습니다.</span>
+    </div>
+
+    <!-- 로컬 로그인 폼 -->
+    <form th:action="@{/member/login}" method="post">
+        <div class="form-group">
+            <label for="email">이메일 계정</label>
+            <input type="email" id="email" name="email" placeholder="example@naver.com" required>
+        </div>
+
+        <div class="form-group">
+            <label for="password">비밀번호</label>
+            <input type="password" id="password" name="password" placeholder="비밀번호를 입력하세요" required>
+        </div>
+
+        <button type="submit" class="btn-login">로그인</button>
+    </form>
+
+    <!-- 소셜 로그인 영역 (BusanTasty 원본 복원) -->
+    <div class="social-login-section">
+        <div class="social-divider">
+            <span>간편 소셜 로그인</span>
+        </div>
+
+        <div class="social-buttons">
+            <!-- 네이버 로그인 버튼 -->
+            <a th:href="@{/oauth2/authorization/naver}" class="btn-social btn-naver" role="button" aria-label="네이버 로그인">
+                <svg class="social-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M16.273 12.845L7.376 0H0V24H7.726V11.155L16.624 24H24V0H16.273V12.845Z" fill="white"/>
+                </svg>
+                <span>네이버로 로그인</span>
+            </a>
+
+            <!-- 카카오 로그인 버튼 -->
+            <a th:href="@{/oauth2/authorization/kakao}" class="btn-social btn-kakao" role="button" aria-label="카카오 로그인">
+                <svg class="social-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd" clip-rule="evenodd" d="M12 3C6.477 3 2 6.484 2 10.782C2 13.567 3.805 16.002 6.55 17.382L5.61 20.84C5.498 21.252 5.967 21.579 6.326 21.341L10.511 18.572C11.002 18.636 11.496 18.669 12 18.669C17.523 18.669 22 15.185 22 10.887C22 6.589 17.523 3 12 3Z" fill="#191919"/>
+                </svg>
+                <span>카카오로 로그인</span>
+            </a>
+        </div>
+    </div>
+
+    <div class="login-footer">
+        아직 회원이 아니신가요? <a th:href="@{/member/register}">회원가입</a>
+    </div>
+</div>
+
+</body>
+</html>

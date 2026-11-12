@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>맛집 정보 수정 - 부산 맛집 지도</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; }
+        .modify-card {
+            max-width: 860px;
+            margin: 40px auto;
+        }
+        .image-preview-box {
+            width: 100%;
+            height: 180px;
+            background-color: #f1f3f5;
+            border: 2px dashed #ced4da;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+        .image-preview-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+    </style>
+</head>
+<body class="d-flex flex-column min-vh-100">
+
+<!-- 상단 네비게이션 바 -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
+    <div class="container">
+        <a class="navbar-brand fw-bold" th:href="@{/place/list}">🌊 부산 맛집 지도</a>
+        <div class="ms-auto d-flex align-items-center">
+            <!-- 자동 로그아웃 카운트다운 타이머 배지 -->
+            <span id="sessionTimerBadge" th:if="${session.loginMember != null}" class="badge bg-light text-dark me-2 fw-normal" title="5분간 무입력 시 자동 로그아웃">⏱️ 05:00</span>
+            <a th:href="@{/place/read(pno=${dto.pno})}" class="btn btn-outline-light btn-sm">← 상세 정보로 돌아가기</a>
+        </div>
+    </div>
+</nav>
+
+<div class="container">
+    <div class="card modify-card shadow-sm border-0">
+        <div class="card-header bg-warning text-dark py-3">
+            <h4 class="mb-0 fw-bold">✏️ 맛집 정보 수정 (관리자 전용)</h4>
+        </div>
+
+        <div class="card-body p-4">
+            <!-- 맛집 수정 폼 (파일 업로드 지원) -->
+            <form id="modifyForm" th:action="@{/place/modify}" method="post" enctype="multipart/form-data">
+                <input type="hidden" name="pno" th:value="${dto.pno}">
+                <input type="hidden" name="page" th:value="${pageRequestDTO != null ? pageRequestDTO.page : 1}">
+                <input type="hidden" name="size" th:value="${pageRequestDTO != null ? pageRequestDTO.size : 10}">
+
+                <!-- 1. 식당 번호 & 지역구 & 카테고리 -->
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">식당 번호 (PNO)</label>
+                        <input type="text" class="form-control" th:value="${dto.pno}" readonly disabled>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">지역구 <span class="text-danger">*</span></label>
+                        <select class="form-select" name="guName" required>
+                            <option value="해운대구" th:selected="${dto.guName == '해운대구'}">해운대구</option>
+                            <option value="수영구" th:selected="${dto.guName == '수영구'}">수영구</option>
+                            <option value="부산진구" th:selected="${dto.guName == '부산진구'}">부산진구</option>
+                            <option value="중구" th:selected="${dto.guName == '중구'}">중구</option>
+                            <option value="영도구" th:selected="${dto.guName == '영도구'}">영도구</option>
+                            <option value="금정구" th:selected="${dto.guName == '금정구'}">금정구</option>
+                            <option value="동래구" th:selected="${dto.guName == '동래구'}">동래구</option>
+                            <option value="강서구" th:selected="${dto.guName == '강서구'}">강서구</option>
+                            <option value="남구" th:selected="${dto.guName == '남구'}">남구</option>
+                            <option value="북구" th:selected="${dto.guName == '북구'}">북구</option>
+                            <option value="사상구" th:selected="${dto.guName == '사상구'}">사상구</option>
+                            <option value="사하구" th:selected="${dto.guName == '사하구'}">사하구</option>
+                            <option value="서구" th:selected="${dto.guName == '서구'}">서구</option>
+                            <option value="연제구" th:selected="${dto.guName == '연제구'}">연제구</option>
+                            <option value="동구" th:selected="${dto.guName == '동구'}">동구</option>
+                            <option value="기장군" th:selected="${dto.guName == '기장군'}">기장군</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">카테고리</label>
+                        <input type="text" class="form-control" name="category" th:value="${dto.category}" placeholder="예: 한식, 일식, 카페">
+                    </div>
+                </div>
+
+                <!-- 2. 식당 이름 (한글 & 영문) -->
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">상호명 (한글) <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="restaurantNameKo" th:value="${dto.restaurantNameKo}" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">상호명 (영문)</label>
+                        <input type="text" class="form-control" name="restaurantNameEn" th:value="${dto.restaurantNameEn}">
+                    </div>
+                </div>
+
+                <!-- 3. 주소 & 전화번호 -->
+                <div class="row mb-3">
+                    <div class="col-md-8">
+                        <label class="form-label fw-bold">주소 <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="address" th:value="${dto.address}" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">전화번호</label>
+                        <input type="text" class="form-control" name="phone" th:value="${dto.phone}">
+                    </div>
+                </div>
+
+                <!-- 4. 대표 메뉴 & 가격대 & 주차 정보 -->
+                <div class="row mb-3">
+                    <div class="col-md-5">
+                        <label class="form-label fw-bold">대표 메뉴</label>
+                        <input type="text" class="form-control" name="mainMenu" th:value="${dto.mainMenu}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">가격대</label>
+                        <input type="text" class="form-control" name="priceRange" th:value="${dto.priceRange}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold">주차 정보</label>
+                        <input type="text" class="form-control" name="parking" th:value="${dto.parking}">
+                    </div>
+                </div>
+
+                <!-- 5. 영업시간 / 휴무일 / 브레이크타임 -->
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">영업시간</label>
+                        <input type="text" class="form-control" name="operatingHours" th:value="${dto.operatingHours}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">휴무일</label>
+                        <input type="text" class="form-control" name="offDays" th:value="${dto.offDays}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">브레이크 타임</label>
+                        <input type="text" class="form-control" name="breakTime" th:value="${dto.breakTime}">
+                    </div>
+                </div>
+
+                <!-- 6. 이미지 1 & 이미지 2 (업로드 및 URL 수정) -->
+                <div class="row mb-4">
+                    <!-- 이미지 1 -->
+                    <div class="col-md-6 mb-3 mb-md-0">
+                        <div class="card p-3 bg-light border">
+                            <label class="form-label fw-bold text-primary">🖼️ 대표 이미지 1</label>
+                            
+                            <div class="image-preview-box mb-2" id="previewBox1">
+                                <img id="previewImg1" th:src="${dto.imageUrl1 != null and dto.imageUrl1 != '' ? dto.imageUrl1 : ''}"
+                                     th:style="${dto.imageUrl1 != null and dto.imageUrl1 != '' ? 'display:block;' : 'display:none;'}"
+                                     alt="대표 이미지 1">
+                                <span class="text-muted small" id="previewPlaceholder1" th:style="${dto.imageUrl1 != null and dto.imageUrl1 != '' ? 'display:none;' : 'display:block;'}">📷 이미지 없음</span>
+                            </div>
+
+                            <div class="mb-2">
+                                <label class="form-label small fw-bold text-secondary mb-1">📁 새 이미지 파일로 교체:</label>
+                                <input type="file" class="form-control form-control-sm" name="image1File" accept="image/*" onchange="previewImage(this, 'previewImg1', 'previewPlaceholder1', 'imageUrlInput1')">
+                            </div>
+
+                            <div>
+                                <label class="form-label small fw-bold text-secondary mb-1">🌐 또는 이미지 URL 직접 수정:</label>
+                                <input type="text" class="form-control form-control-sm" id="imageUrlInput1" name="imageUrl1" th:value="${dto.imageUrl1}" oninput="previewUrl(this.value, 'previewImg1', 'previewPlaceholder1')">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 이미지 2 -->
+                    <div class="col-md-6">
+                        <div class="card p-3 bg-light border">
+                            <label class="form-label fw-bold text-primary">🖼️ 서브 이미지 2</label>
+                            
+                            <div class="image-preview-box mb-2" id="previewBox2">
+                                <img id="previewImg2" th:src="${dto.imageUrl2 != null and dto.imageUrl2 != '' ? dto.imageUrl2 : ''}"
+                                     th:style="${dto.imageUrl2 != null and dto.imageUrl2 != '' ? 'display:block;' : 'display:none;'}"
+                                     alt="서브 이미지 2">
+                                <span class="text-muted small" id="previewPlaceholder2" th:style="${dto.imageUrl2 != null and dto.imageUrl2 != '' ? 'display:none;' : 'display:block;'}">📷 이미지 없음</span>
+                            </div>
+
+                            <div class="mb-2">
+                                <label class="form-label small fw-bold text-secondary mb-1">📁 새 이미지 파일로 교체:</label>
+                                <input type="file" class="form-control form-control-sm" name="image2File" accept="image/*" onchange="previewImage(this, 'previewImg2', 'previewPlaceholder2', 'imageUrlInput2')">
+                            </div>
+
+                            <div>
+                                <label class="form-label small fw-bold text-secondary mb-1">🌐 또는 이미지 URL 직접 수정:</label>
+                                <input type="text" class="form-control form-control-sm" id="imageUrlInput2" name="imageUrl2" th:value="${dto.imageUrl2}" oninput="previewUrl(this.value, 'previewImg2', 'previewPlaceholder2')">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 7. 상세 설명 (summaryKo, summaryEn) -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold">상세 설명 (한국어)</label>
+                    <textarea class="form-control" name="summaryKo" rows="3" th:text="${dto.summaryKo}"></textarea>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label fw-bold">상세 설명 (영문)</label>
+                    <textarea class="form-control" name="summaryEn" rows="2" th:text="${dto.summaryEn}"></textarea>
+                </div>
+
+                <!-- 하단 버튼 영역: 취소 / 삭제 / 수정 완료 -->
+                <div class="text-end border-top pt-3">
+                    <a th:href="@{/place/read(pno=${dto.pno})}" class="btn btn-secondary me-2">취소</a>
+                    <button type="button" class="btn btn-danger me-2 fw-bold" onclick="removePlace()">🗑️ 맛집 삭제</button>
+                    <button type="submit" class="btn btn-warning fw-bold">수정 완료</button>
+                </div>
+            </form>
+
+            <!-- 맛집 삭제용 별도 POST 폼 -->
+            <form id="removeForm" th:action="@{/place/remove}" method="post" style="display: none;">
+                <input type="hidden" name="pno" th:value="${dto.pno}">
+            </form>
+        </div>
+    </div>
+</div>
+
+<footer class="bg-white py-4 border-top text-center text-muted mt-auto">
+    <div class="container">
+        <p class="mb-0">© 2026 부산 맛집 탐방 서비스. All rights reserved.</p>
+    </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- 5분 무활동 자동 로그아웃 스크립트 -->
+<script th:if="${session.loginMember != null}" src="/js/auto-logout.js"></script>
+
+<script th:inline="javascript">
+    function previewImage(input, imgId, placeholderId, urlInputId) {
+        const img = document.getElementById(imgId);
+        const placeholder = document.getElementById(placeholderId);
+        const urlInput = document.getElementById(urlInputId);
+
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                img.src = e.target.result;
+                img.style.display = 'block';
+                placeholder.style.display = 'none';
+            };
+            reader.readAsDataURL(input.files[0]);
+            if (urlInput) {
+                urlInput.value = '';
+            }
+        }
+    }
+
+    function previewUrl(url, imgId, placeholderId) {
+        const img = document.getElementById(imgId);
+        const placeholder = document.getElementById(placeholderId);
+
+        if (url && url.trim() !== '') {
+            img.src = url.trim();
+            img.onload = function() {
+                img.style.display = 'block';
+                placeholder.style.display = 'none';
+            };
+            img.onerror = function() {
+                img.style.display = 'none';
+                placeholder.style.display = 'block';
+            };
+        } else {
+            img.style.display = 'none';
+            placeholder.style.display = 'block';
+        }
+    }
+
+    function removePlace() {
+        if (confirm('정말 이 맛집 정보를 삭제하시겠습니까?\n\n⚠️ 폐업하거나 정보가 사라진 맛집은 삭제 후 복구할 수 없습니다.')) {
+            document.getElementById('removeForm').submit();
+        }
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>관리자 대시보드 - 회원 관리</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background-color: #f4f7fc; }
+
+        /* 상단 헤더 */
+        .site-header {
+            background-color: #17477d;
+            color: white;
+            padding: 15px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .site-logo { color: white; font-size: 22px; font-weight: 700; text-decoration: none; }
+        .site-nav a { color: white; text-decoration: none; font-size: 15px; margin-left: 20px; }
+
+        /* 레이아웃 컨테이너 */
+        .admin-wrap {
+            width: 90%;
+            max-width: 1400px;
+            margin: 40px auto;
+        }
+        .admin-title { color: #17477d; font-size: 38px; font-weight: 700; margin-bottom: 10px; }
+        .admin-subtitle { color: #666; font-size: 16px; margin-bottom: 30px; }
+        .admin-line { height: 3px; background: #1769ff; margin-bottom: 40px; }
+
+        .admin-content { display: flex; gap: 40px; align-items: flex-start; }
+
+        /* 좌측 서브 메뉴 */
+        .admin-menu { width: 250px; background: white; border: 1px solid #d9e3f0; border-radius: 8px; overflow: hidden; }
+        .menu-title { background: #edf5ff; color: #17477d; padding: 20px; font-size: 18px; font-weight: 700; border-bottom: 1px solid #d9e3f0; }
+        .admin-menu a {
+            display: block; padding: 18px 20px; color: #17477d; text-decoration: none; font-weight: 600; border-bottom: 1px solid #edf5ff; transition: 0.2s;
+        }
+        .admin-menu a:hover, .admin-menu a.active { background: #1769ff; color: white; }
+
+        /* 우측 테이블 메인 */
+        .admin-main { flex: 1; background: white; padding: 30px; border-radius: 8px; border: 1px solid #d9e3f0; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+        .section-title { color: #17477d; font-size: 24px; font-weight: 700; margin-bottom: 20px; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border-bottom: 1px solid #eef2f7; padding: 15px 12px; text-align: center; font-size: 15px; }
+        th { background-color: #f8fbff; color: #17477d; font-weight: 600; }
+
+        .badge-admin { background: #e3efff; color: #1769ff; padding: 5px 10px; border-radius: 4px; font-weight: 600; }
+        .badge-user { background: #f0f0f0; color: #555; padding: 5px 10px; border-radius: 4px; }
+        .badge-banned { background: #ffe6e6; color: #d33; padding: 5px 10px; border-radius: 4px; font-weight: 600; }
+
+        .btn-ban { background-color: #ff4d4d; color: white; border: none; padding: 8px 14px; border-radius: 4px; cursor: pointer; font-weight: 600; }
+        .btn-ban:hover { background-color: #e03b3b; }
+        .btn-unban { background-color: #4CAF50; color: white; border: none; padding: 8px 14px; border-radius: 4px; cursor: pointer; font-weight: 600; }
+        .btn-unban:hover { background-color: #43a047; }
+    </style>
+</head>
+<body>
+
+<!-- 상단 헤더 -->
+<header class="site-header">
+    <a th:href="@{/admin/index}" class="site-logo">👑 부산 Tasty 관리자</a>
+    <div class="site-nav">
+        <!-- 자동 로그아웃 카운트다운 타이머 배지 -->
+        <span id="sessionTimerBadge" th:if="${session.loginMember != null}" style="background: rgba(255,255,255,0.2); padding: 5px 10px; border-radius: 4px; font-size: 14px;" title="5분간 무입력 시 자동 로그아웃">⏱️ 05:00</span>
+        <a th:href="@{/place/list}">사이트 홈</a>
+        <a th:href="@{/member/logout}">로그아웃</a>
+    </div>
+</header>
+
+<div class="admin-wrap">
+    <h1 class="admin-title">관리자 대시보드</h1>
+    <p class="admin-subtitle">부산 맛집 서비스의 모든 회원 목록과 권한을 관리하는 페이지입니다.</p>
+    <div class="admin-line"></div>
+
+    <div class="admin-content">
+        <!-- 좌측 사이드바 서브 메뉴 -->
+        <aside class="admin-menu">
+            <div class="menu-title">Admin Menu</div>
+            <a th:href="@{/admin/members}" class="active">👥 회원 관리</a>
+            <a th:href="@{/place/list}">🍽️ 맛집 목록 바로가기</a>
+            <a th:href="@{/admin/reviews}">💬 전체 리뷰 관리</a>
+        </aside>
+
+        <!-- 우측 회원 관리 메인 테이블 -->
+        <main class="admin-main">
+            <h2 class="section-title">회원 관리 목록 (총 <span th:text="${members != null ? members.size() : 0}">0</span>명)</h2>
+
+            <table>
+                <thead>
+                <tr>
+                    <th>회원번호</th>
+                    <th>이메일</th>
+                    <th>닉네임</th>
+                    <th>권한 (Role)</th>
+                    <th>계정 제어</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="m : ${members}">
+                    <td th:text="${m.mno}">1</td>
+                    <td th:text="${m.email}">email@test.com</td>
+                    <td th:text="${m.nickname}">닉네임</td>
+                    <td>
+                        <span th:if="${m.role == 'ROLE_ADMIN'}" class="badge-admin">ADMIN</span>
+                        <span th:if="${m.role == 'ROLE_USER' or m.role == 'USER' or m.role == null}" class="badge-user">USER</span>
+                        <span th:if="${m.role == 'BANNED'}" class="badge-banned">BANNED</span>
+                    </td>
+                    <td>
+                        <!-- 일반 사용자 계정 정지 버튼 -->
+                        <form th:if="${m.role != 'BANNED' and m.role != 'ROLE_ADMIN'}" th:action="@{/admin/member/ban}" method="post" style="display:inline;">
+                            <input type="hidden" name="mno" th:value="${m.mno}" />
+                            <button type="submit" class="btn-ban" onclick="return confirm('이 회원의 계정을 정지하시겠습니까?');">계정 정지</button>
+                        </form>
+
+                        <!-- 정지된 회원 해제 버튼 -->
+                        <form th:if="${m.role == 'BANNED'}" th:action="@{/admin/member/unban}" method="post" style="display:inline;">
+                            <input type="hidden" name="mno" th:value="${m.mno}" />
+                            <button type="submit" class="btn-unban">정지 해제</button>
+                        </form>
+
+                        <!-- 관리자는 정지 불가능 -->
+                        <span th:if="${m.role == 'ROLE_ADMIN'}" style="color: #888; font-size: 13px;">제어 불가</span>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </main>
+    </div>
+</div>
+
+<!-- 5분 무활동 자동 로그아웃 스크립트 -->
+<script th:if="${session.loginMember != null}" src="/js/auto-logout.js"></script>
+
+</body>
+</html>
